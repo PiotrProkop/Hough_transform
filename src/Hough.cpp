@@ -97,6 +97,7 @@ Hough::createKernel(char* fileName, const char* name)
 /* Create OpenCL Kernel */
     kernel = clCreateKernel(program, name, &ret);
     utils::handleError(ret);
+    free(source_str);
 }
 
 void
@@ -145,7 +146,7 @@ Hough::setupCL()
     utils::handleError(ret);
 
 /* Create Memory Buffer */
-    readInputImage("Input_Image.bmp");
+    readInputImage("../images/Input_Image.bmp");
     inputImageBuffer =  clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR | CL_MEM_COPY_HOST_PTR,
                                                         width_original * height_original * pixelSize, inputImageData, &ret);
     utils::handleError(ret);
@@ -183,7 +184,7 @@ Hough::run()
     //ret = clFlush(command_queue);
     ret = clWaitForEvents(1, &event);
     utils::handleError(ret);
-    writeOutputImage("Out.bmp");
+    writeOutputImage("../output/Out.bmp");
 
 }
 void
@@ -194,7 +195,7 @@ Hough::swapBuffers()
 void
 Hough::greyScale()
 {
-    char greyscale[] = "./GreyScale_Kernels.cl";
+    char greyscale[] = "../kernels/GreyScale_Kernels.cl";
     Hough::enqueueKernel(greyscale, "greyscale_filter");
     Hough::swapBuffers();
 }
@@ -202,14 +203,14 @@ Hough::greyScale()
 void
 Hough::gauss()
 {
-    char gaussian[] = "./Gaussian_Kernels.cl";
+    char gaussian[] = "../kernels/Gaussian_Kernels.cl";
     Hough::enqueueKernel(gaussian, "gaussian_filter");
     Hough::swapBuffers();
 }
 void
 Hough::sobel()
 {
-    char sobel[] = "./SobelFilter_Kernels.cl";
+    char sobel[] = "../kernels/SobelFilter_Kernels.cl";
     Hough::enqueueKernel(sobel,"sobel_filter",true);
     Hough::swapBuffers();
 }
@@ -217,7 +218,7 @@ Hough::sobel()
 void
 Hough::max()
 {
-    char max[] = "./Max_Kernels.cl";
+    char max[] = "../kernels/Max_Kernels.cl";
     Hough::enqueueKernel(max, "Max_filter",true);
     Hough::swapBuffers();
 }
@@ -225,6 +226,6 @@ Hough::max()
 void
 Hough::hyst()
 {
-    char hysteresis[] = "./Hysteresis_Kernels.cl";
+    char hysteresis[] = "../kernels/Hysteresis_Kernels.cl";
     Hough::enqueueKernel(hysteresis, "Hyst_filter");
 }
