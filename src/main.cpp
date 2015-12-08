@@ -7,39 +7,29 @@
 #include <CL/cl.h>
 #endif
 #include "Hough.hpp"
-//#define MEM_SIZE (128)
-//#define MAX_SOURCE_SIZE (0x100000)
-//#define GROUP_SIZE 16
+#include <stdio.h>
 
-//using namespace appsdk;
-
-int main()
+int main(int argc, char** argv)
 {
 
+if(argc != 2) {
+    std::cout << " First parameter is location of image" << std::endl;
+    exit(1);
+}
 
-
-
- 
-
-char greyscale[] = "./GreyScale_Kernels.cl";
-char gaussian[] = "./Gaussian_Kernels.cl";
-char sobel[] = "./SobelFilter_Kernels.cl";
-char max[] = "./Max_Kernels.cl";
-char hysteresis[] = "./Hysteresis_Kernels.cl";
-
-
-/* Get Platform and Device Info */
-
+char* fileName = argv[1];
 
 
 Hough houghTransform;
-houghTransform.setupCL();
+houghTransform.setupCL(fileName);
 houghTransform.greyScale();
 houghTransform.gauss();
 houghTransform.sobel();
 houghTransform.max();
 houghTransform.hyst();
 houghTransform.run();
+houghTransform.houghTransform();
+
 houghTransform.cleanUp();
 
 

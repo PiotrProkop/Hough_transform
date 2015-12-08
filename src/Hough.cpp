@@ -3,9 +3,19 @@
 //
 
 #include "Hough.hpp"
-#include "../include/utils.hpp"
+#include "utils.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/ocl/ocl.hpp"
+#include "opencv2/core/core.hpp"
+#include <vector>
 #define MEM_SIZE (128)
 #define MAX_SOURCE_SIZE (0x100000)
+#define MAX_LINES 1000
+#define MUL_UP(a, b) ((a)/(b)+1)*(b)
+
+using namespace cv;
+using namespace cv::ocl;
 
 int Hough::readInputImage(std::string inputImageName)
 {
@@ -54,6 +64,10 @@ Hough::writeOutputImage(std::string outputImageName)
     // copy output image data back to original pixel data
     memcpy(pixelData, outputImageData,
            width_original * height_original * pixelSize);
+
+/*    memcpy(pixelData, accumulator,
+           accu_width * accu_height * pixelSize);*/
+
 
     //inputBitmap.height = height;
     //inputBitmap.width = width;
@@ -124,7 +138,7 @@ Hough::cleanUp()
 }
 
 void
-Hough::setupCL()
+Hough::setupCL(char* fileName)
 {
     size_t valueSize;
     char* value;
@@ -146,7 +160,8 @@ Hough::setupCL()
     utils::handleError(ret);
 
 /* Create Memory Buffer */
-    readInputImage("../images/Input_Image.bmp");
+//    readInputImage("../images/coins.bmp");
+    readInputImage(fileName);
     inputImageBuffer =  clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR | CL_MEM_COPY_HOST_PTR,
                                                         width_original * height_original * pixelSize, inputImageData, &ret);
     utils::handleError(ret);
@@ -154,6 +169,7 @@ Hough::setupCL()
     utils::handleError(ret);
     thetaBuffer = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR, width_original * height_original * pixelSize, 0, &ret);
     utils::handleError(ret);
+
 
 }
 
@@ -180,11 +196,13 @@ Hough::run()
     cl_event event;
     ret = clEnqueueReadBuffer(command_queue, outputImageBuffer, CL_TRUE, 0,
                               width * height * pixelSize, outputImageData, 0, NULL, &event);
+    /*ret = clEnqueueReadBuffer(command_queue, accuBuffer, CL_TRUE, 0,
+                              accu_width * accu_height * pixelSize, accumulator, 0, NULL, &event);*/
     utils::handleError(ret);
     //ret = clFlush(command_queue);
     ret = clWaitForEvents(1, &event);
     utils::handleError(ret);
-    writeOutputImage("../output/Out.bmp");
+    writeOutputImage("../output/Canny.bmp");
 
 }
 void
@@ -229,3 +247,38 @@ Hough::hyst()
     char hysteresis[] = "../kernels/Hysteresis_Kernels.cl";
     Hough::enqueueKernel(hysteresis, "Hyst_filter");
 }
+void
+Hough::houghTransform(){
+
+    Mat src = imread("../output/Canny.bmp",1);
+    //cleanUp();
+    Mat src_gray;
+    Mat out(src.rows,src.cols,CV_8UC3, Scalar(0,0,0));
+
+    cvtColor( src, src_gray, CV_BGR2GRAY );
+    std::vector<Vec3f> circles;
+
+    GaussianBlur( src_gray, src_gray, Size(9, 9), 2, 2 );
+
+    HoughCircles( src_gray, circles, CV_HOUGH_GRADIENT, 1, src_gray.rows/8, 200, 100, 0, 0 );
+
+    for( size_t i = 0; i < circles.size(); i++ )
+    {
+        Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+        int radius = cvRound(circles[i][2]);
+        // circle center
+        circle( out, center, 3, Scalar(0,255,0), -1, 8, 0 );
+        circle( src, center, 3, Scalar(0,255,0), -1, 8, 0 );
+        // circle outline
+        circle( out, center, radius, Scalar(0,0,255), 3, 8, 0 );
+        circle( src, center, radius, Scalar(0,0,255), 3, 8, 0 );
+    }
+
+
+    imwrite("../output/Hough.bmp", out);
+    imwrite("../output/Hough_stacked.bmp", src);
+
+
+}
+
+

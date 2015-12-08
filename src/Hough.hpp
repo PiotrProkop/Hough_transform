@@ -8,9 +8,16 @@
 #define GROUP_SIZE 16
 #include "../include/AMDSDKUtil/SDKBitMap.hpp"
 #include <CL/cl.h>
+#include <math.h>
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/ocl/ocl.hpp"
+#include "opencv2/core/core.hpp"
 //#include "../include/utils.h"
 
 using namespace appsdk;
+using namespace cv;
+using namespace cv::ocl;
 class Hough {
 
 public:
@@ -23,6 +30,8 @@ public:
     cl_uint height_original;
     cl_uchar4* inputImageData;          /**< Input bitmap data to device */
     cl_uchar4* outputImageData;         /**< Output from device */
+    cl_uchar4* accumulator;
+    //cl_uchar4* num_lines;
     cl_program program;
     cl_int ret;
     cl_device_id device_id;
@@ -39,11 +48,12 @@ public:
     size_t blockSizeX;                  /**< Work-group size in x-direction */
     size_t blockSizeY;
 
+
     int readInputImage(std::string inputImageName);
     int writeOutputImage(std::string outputImageName);
     void createKernel(char*,const char*);
     void cleanUp();
-    void setupCL();
+    void setupCL(char* fileName);
     void run();
     void enqueueKernel(char*, const char*, bool=false);
     void greyScale();
@@ -52,10 +62,14 @@ public:
     void max();
     void hyst();
     void swapBuffers();
+    void houghTransform();
+
+
 
     Hough()
             : inputImageData(NULL),
               outputImageData(NULL)
+
     {
         pixelSize = sizeof(uchar4);
         pixelData = NULL;
